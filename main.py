@@ -13,7 +13,7 @@ import config
 
 
 async def main():
-    bot = Bot(token='6934198537:AAHT7vqrUqyHptNWtXoZxaPNhAgs9489RUk')
+    bot = Bot(token='6492750183:AAHmx4Yk5hG9ZD8uPJyS94UmTpi6tW18ulc')
     dp = Dispatcher()
 
     async with async_engine.begin() as conn:
