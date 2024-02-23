@@ -23,6 +23,17 @@ async def get_bot_name(bot: Bot):
     bot_name = info_about_bot.username
     return bot_name
 
+def checking_name_validity(stickerset_title: str) -> bool:
+    for char in stickerset_title:
+        if not ((ord('0') <= ord(char) <= ord('9')) or
+                (ord('A') <= ord(char) <= ord('Z')) or
+                (ord('a') <= ord(char) <= ord('z')) or
+                (ord('а') <= ord(char) <= ord('я')) or
+                (ord('А') <= ord(char) <= ord('Я')) or
+                (char == '_') or
+                (char == ' ')):
+            return False
+    return True
 
 async def convert_to_png(input_file: str) -> str:
     file_path, ext = input_file.rsplit(".", 1)
@@ -35,7 +46,7 @@ async def convert_to_png(input_file: str) -> str:
 # the user clicked on the "create stickerset" button in the menu
 @router.callback_query(F.data == 'create_stickerset_button')
 async def start_create_new_stickerset(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(text='<b>Введите название для стикерпака</b>', parse_mode='HTML')
+    await callback.message.edit_text(text='🤔 <b>Введите название для стикерпака</b>', parse_mode='HTML')
     await state.set_state(CreateStickerset.stickerset_input_title)
 
 # the user enters a name for the new stickerset
@@ -43,28 +54,38 @@ async def start_create_new_stickerset(callback: CallbackQuery, state: FSMContext
 async def stickerset_title_verification(message: Message, state: FSMContext, bot: Bot):
     bot_name = await get_bot_name(bot=bot)
     stickerset_title = message.text
-    stickerset_name = translit(value=stickerset_title, language_code='ru', reversed=True).replace(" ", "_").lower( )
-    #print(f'{stickerset_name}_by_{bot_name}')
-    #print(f'{translit(value=stickerset_title, language_code="ru", reversed=True)}_by_{bot_name}')
-    if len(stickerset_title + bot_name) + 2 > 64:
-        await message.answer(text=(
-            'Вы ввели слишком длинное название для стикерпака.'
-            'Попробуйте еще раз'))
+    if stickerset_title == None:
+        await message.answer(text=('😌 Ипспользуй для названия толко буквы, цифры, проблелы или знаки подчеркивания)'))
     else:
-        await state.set_data({
-            "create_stickerset": True,
-            "stickerset_title": f'{stickerset_title} @{bot_name}', # TODO сделать транслитирование title -> name
-            "stickerset_name": f'{stickerset_name}_by_{bot_name}'
-        })
-        await message.answer(text=(
-            '<b>Отлично! Теперь делаем так:</b>\n\n'
-            '<b>1.</b> Отсправь мне <b>картинку</b> и я сразу добавляю ее в новый стикерпак с эмодзи 🌟\n'
-            '<b>2.</b> Отправь мне <b>эмодзи</b>, если хочешь назначить его предыдущему стикеру\n'
-            '<b>3.</b> Процесс добавления стикеров будет повторяться до тех пор, пока ты не нажмешь кнопку <b>«Готово»</b>\n\n'),
-            parse_mode='HTML')
-        await sleep(1.5)
-        await message.answer(text='Давай начнем! Отправь мне первую картинку🖼')
-        await state.set_state(CreateStickerset.sending_image)
+        stickerset_name = translit(value=stickerset_title, language_code='ru', reversed=True).replace(" ", "_").lower( )
+
+        if len(stickerset_title + bot_name) + 5 > 64:
+            await message.answer(
+                text=(
+                '🥲 Это слишком длинное название для стикерпака\n'
+                '<b>Попробуй еще раз!</b>'),
+                parse_mode='HTML')
+        else:
+            if not checking_name_validity(stickerset_title):
+                await message.answer(
+                    text=('🥲 Кажется, что в названии есть специальные символы или эмодзи. Так делать нельзя)\n'
+                    '<b>Попробуй еще раз!</b>'),
+                    parse_mode='HTML')
+            else:
+                await state.set_data({
+                    "create_stickerset": True,
+                    "stickerset_title": f'{stickerset_title} @{bot_name}',
+                    "stickerset_name": f'my_{stickerset_name}_by_{bot_name}'
+                })
+                await message.answer(text=(
+                    '😃 <b>Отлично! Теперь делаем так:</b>\n\n'
+                    '<b>1.</b> Отправь мне <b>картинку</b> и я сразу добавлю ее в новый стикерпак с таким эмодзи: 🌟\n'
+                    '<b>2.</b> Отправь мне <b>эмодзи</b>, если хочешь назначить его предыдущему стикеру\n'
+                    '<b>3.</b> Процесс добавления стикеров будет повторяться до тех пор, пока ты не нажмешь кнопку <b>«Готово»</b>\n\n'),
+                    parse_mode='HTML')
+                await sleep(1)
+                await message.answer(text='🖼 <b>Давай начнем! Отправь мне первую картинку</b>', parse_mode='HTML')
+                await state.set_state(CreateStickerset.sending_image)
 
 @router.message(CreateStickerset.sending_image)
 async def get_image(message: Message, state: FSMContext, bot: Bot):
@@ -72,8 +93,8 @@ async def get_image(message: Message, state: FSMContext, bot: Bot):
     # we check if the user sent a photo or something else
     if message.photo == None:
         await message.answer(text=(
-            'Кажатся, вы отправили не картинку, а что-то другое...😬\n'
-            'Попробуйте еще раз!)'))
+            '😬 Кажатся, что я получил не картинку, а что-то другое...\n'
+            'Попробуй еще раз!)'))
     else:
         # collect information about the file
         file_id = message.photo[-1].file_id
@@ -94,10 +115,12 @@ async def get_image(message: Message, state: FSMContext, bot: Bot):
         # creating a sticker as an instance of the InputSticker class
 
         upload_sticker_file = await bot.upload_sticker_file(user_id=user_id, sticker=sticker_input_file, sticker_format='static')
-        os.remove(download_file)
 
         sticker_id = upload_sticker_file.file_id
         sticker = InputSticker(sticker=sticker_id, emoji_list=list('🌟'))
+
+        os.remove(download_file)
+        os.remove(image_png)
 
         #await state.update_data(last_added_sticker=sticker_id)
         data = await state.get_data()

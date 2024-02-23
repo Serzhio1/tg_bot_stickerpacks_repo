@@ -1,6 +1,6 @@
+import aiogram.exceptions
 from aiogram import Router, Bot, F
-from aiogram.types import Message, CallbackQuery, InputSticker, FSInputFile
-from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import Message, InputSticker, FSInputFile
 from keyboards.actions_after_creating_stickerset_keyboard import actions_after_creating_stickerset_kb
 from aiogram.fsm.context import FSMContext
 from states import CreateStickerset
@@ -8,15 +8,6 @@ import os
 
 from handlers.create_stickerset_handler import convert_to_png
 router = Router()
-
-#def convert_to_png(file_path, file_unique_id, bot):
-#    file_extension = file_path.rsplit('.', 1)[-1]
-#    download_file = f"output.{file_extension}"
-#    #await bot.download_file(file_path=file_path, destination=download_file)
-#    image_png = f'images/{file_unique_id}.png'
-#    subprocess.call(["ffmpeg", "-v", "0", "-y", "-i", download_file, "-vf", "scale=512:512", image_png])
-#    os.remove(download_file)
-#    return image_png
 
 @router.message(CreateStickerset.stickers_input)
 async def add_sticker_to_stickerset(message: Message, state: FSMContext, bot: Bot):
@@ -45,9 +36,12 @@ async def add_sticker_to_stickerset(message: Message, state: FSMContext, bot: Bo
             sticker_input_file = FSInputFile(image_png)
 
             upload_sticker_file = await bot.upload_sticker_file(user_id=user_id, sticker=sticker_input_file, sticker_format='static')
-            os.remove(download_file)
+
             sticker_id = upload_sticker_file.file_id
             sticker = InputSticker(sticker=sticker_id, emoji_list=list('🌟'))
+
+            os.remove(download_file)
+            os.remove(image_png)
 
             await bot.add_sticker_to_set(user_id=user_id, name=stickerset_name, sticker=sticker)
             await state.update_data(last_added_sticker=sticker_id)
@@ -76,9 +70,13 @@ async def add_sticker_to_stickerset(message: Message, state: FSMContext, bot: Bo
             sticker_input_file = FSInputFile(image_png)
 
             upload_sticker_file = await bot.upload_sticker_file(user_id=user_id, sticker=sticker_input_file, sticker_format='static')
-            os.remove(image_png)
+
             sticker_id = upload_sticker_file.file_id
             sticker = InputSticker(sticker=sticker_id, emoji_list=list('🌟'))
+
+            os.remove(download_file)
+            os.remove(image_png)
+            
             await bot.add_sticker_to_set(user_id=user_id, name=stickerset_name, sticker=sticker)
             await state.update_data(last_added_sticker=sticker_id)
             await message.answer(text=(
@@ -90,21 +88,28 @@ async def add_sticker_to_stickerset(message: Message, state: FSMContext, bot: Bo
                 parse_mode='HTML')
 
     else: # we put the emoji in accordance with the previous picture
-        data = await state.get_data()
-        stickerset_name = data.get('stickerset_name')
-        info_about_stickerset = await bot.get_sticker_set(stickerset_name)
-        print(info_about_stickerset)
-        last_sticker_id = info_about_stickerset.stickers[-1].file_id
-        await bot.set_sticker_emoji_list(sticker=last_sticker_id, emoji_list=list(emoji))
+        try:
+            data = await state.get_data()
+            stickerset_name = data.get('stickerset_name')
+            info_about_stickerset = await bot.get_sticker_set(stickerset_name)
+            print(info_about_stickerset)
+            last_sticker_id = info_about_stickerset.stickers[-1].file_id
+            await bot.set_sticker_emoji_list(sticker=last_sticker_id, emoji_list=list(emoji))
 
-        #last_added_sticker = state.update_data(last_sticker_id=last_sticker_id)
-        await message.answer(text=(
-            f'🌈 <b>Отлично, эмодзи {emoji} назначен предыдущему стикеру!</b>\n\n'
-            '<b>1.</b> Отправь следующую <b>картинку</b>, чтобы добавить еще один стикер в этот стикерпак\n'
-            '<b>2.</b> Отправь <b>эмодзи</b>, если хочешь назначить его предыдущему стикеру\n'
-            '<b>3.</b> Нажми кнопку <b>"Готово"</b>, если хочешь закончить работу с этим стикерпаком'),
-            reply_markup=actions_after_creating_stickerset_kb,
-            parse_mode='HTML')
+            #last_added_sticker = state.update_data(last_sticker_id=last_sticker_id)
+            await message.answer(text=(
+                f'🌈 <b>Отлично, эмодзи {emoji} назначен предыдущему стикеру!</b>\n\n'
+                '<b>1.</b> Отправь следующую <b>картинку</b>, чтобы добавить еще один стикер в этот стикерпак\n'
+                '<b>2.</b> Отправь <b>эмодзи</b>, если хочешь назначить его предыдущему стикеру\n'
+                '<b>3.</b> Нажми кнопку <b>"Готово"</b>, если хочешь закончить работу с этим стикерпаком'),
+                reply_markup=actions_after_creating_stickerset_kb,
+                parse_mode='HTML')
+        except aiogram.exceptions.TelegramBadRequest as e:
+            await message.answer(
+                text=('🥲 К сожалению, такой эмодзи использовать нельзя)\n'
+                '<b>Выбери другой!</b>'),
+                parse_mode='HTML')
+
 
 
 

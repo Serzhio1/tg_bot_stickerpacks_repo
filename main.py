@@ -3,7 +3,7 @@ from aiogram import Bot, Dispatcher
 from handlers import greeting_hadler
 from handlers import create_stickerset_handler
 from handlers import add_stickers_hendler
-from handlers import finish_work_stickerset_handler
+from handlers import finish_work_with_stickerset_handler
 from handlers import my_packs_handler
 
 from database import async_engine, Base
@@ -13,7 +13,7 @@ import config
 
 
 async def main():
-    bot = Bot(token='6492750183:AAHmx4Yk5hG9ZD8uPJyS94UmTpi6tW18ulc')
+    bot = Bot(token='6934198537:AAHT7vqrUqyHptNWtXoZxaPNhAgs9489RUk')
     dp = Dispatcher()
 
     async with async_engine.begin() as conn:
@@ -22,7 +22,7 @@ async def main():
 
     dp.include_router(create_stickerset_handler.router)
     dp.include_router(add_stickers_hendler.router)
-    dp.include_router(finish_work_stickerset_handler.router)
+    dp.include_router(finish_work_with_stickerset_handler.router)
     dp.include_router(greeting_hadler.router)
     dp.include_router(my_packs_handler.router)
 

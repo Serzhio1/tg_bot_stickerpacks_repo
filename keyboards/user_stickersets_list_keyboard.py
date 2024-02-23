@@ -4,12 +4,12 @@ from models.user_stickersets import UserStickersetsORM
 from sqlalchemy import select
 
 async def user_stickerset_list(user_id):
+    count_stickerpacks = 0
     user_stickerset_list_buttons = []
     async with session_factory() as session:
         query = select(UserStickersetsORM).filter(UserStickersetsORM.tg_id == user_id)
         result = await session.execute(query)
         user_stickerpacks = result.scalars().all()
-        count_stickerpacks = 0
         for stickerpack in user_stickerpacks:
             count_stickerpacks += 1
             user_stickerset_list_buttons.append(
@@ -19,4 +19,4 @@ async def user_stickerset_list(user_id):
             [InlineKeyboardButton(text='Вернуться в меню', callback_data='back_to_menu_button')]
         )
         user_stickerset_list_kb = InlineKeyboardMarkup(inline_keyboard=user_stickerset_list_buttons)
-    return user_stickerset_list_kb
+    return user_stickerset_list_kb, count_stickerpacks

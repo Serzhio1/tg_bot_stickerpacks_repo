@@ -1,5 +1,5 @@
-from aiogram import Router, Bot, F
-from aiogram.types import Message, CallbackQuery
+from aiogram import Router, F
+from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from keyboards.start_menu_keyboard_keyboard import menu_inline_kb

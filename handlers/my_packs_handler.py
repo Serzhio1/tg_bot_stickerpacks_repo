@@ -1,5 +1,5 @@
 from aiogram import Router, Bot, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from sqlalchemy import select, delete
@@ -10,6 +10,7 @@ from states import CreateStickerset
 from keyboards.stickerset_actions_list_keyboard import stickerset_actions_list_kb
 from keyboards.confirm_delete_stickerset_keyboard import confirm_delete_stickerset_kb
 from keyboards.start_menu_keyboard_keyboard import menu_inline_kb
+from asyncio import sleep
 
 
 router = Router()
@@ -43,19 +44,27 @@ async def delete_stickerset(callback: CallbackQuery, bot: Bot, state: FSMContext
         query = delete(UserStickersetsORM).where(UserStickersetsORM.stickerset_name == stickerset_name)
         await session.execute(query)
         await session.commit()
-    await callback.message.answer(text='<b>Cтикерпак был успешно удален</b>', parse_mode='HTML')
-    await callback.message.edit_text(text='😃 <b>Выбери действие</b>', reply_markup=menu_inline_kb, parse_mode='HTML')
+    await callback.message.edit_text(text='🫡 <b>Cтикерпак был успешно удален</b>', parse_mode='HTML')
+    await sleep(1)
+    await callback.message.answer(text='😃 <b>Выбери действие</b>', reply_markup=menu_inline_kb, parse_mode='HTML')
     await state.clear()
 
 @router.callback_query(F.data=='my_stickersets_button')
 async def see_my_packs(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
-    await callback.message.edit_text(text='👇<b>Выбери нужный стикерпак</b>👇', reply_markup=await user_stickerset_list(user_id=user_id), parse_mode='HTML')
-    await state.set_state(CreateStickerset.choosing_stickerset)
+    user_stickerset_list_keyboard, count_stickerpacks = await user_stickerset_list(user_id=user_id)
+    if count_stickerpacks == 0:
+        await callback.message.edit_text(text='🙃 <b>У тебя пока что нет стикерпаков</b>', parse_mode='HTML')
+        await sleep(1)
+        await callback.message.answer(text='😃 <b>Выбери действие</b>', reply_markup=menu_inline_kb, parse_mode='HTML')
+    else:
+        await callback.message.edit_text(text='👇<b>Выбери нужный стикерпак</b>👇', reply_markup=user_stickerset_list_keyboard, parse_mode='HTML')
+        await state.set_state(CreateStickerset.choosing_stickerset)
 
 @router.callback_query(CreateStickerset.choosing_stickerset)
 async def stickerset_actions_list(callback: CallbackQuery, state: FSMContext):
     async with session_factory() as session:
+        await state.update_data(stickerset_name=callback.data)
         query = select(UserStickersetsORM).filter(UserStickersetsORM.stickerset_name == callback.data)
         result = await session.execute(query)
         stickerset = result.scalar()
@@ -75,7 +84,7 @@ async def stickerset_actions_list(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(CreateStickerset.adding_sticker_to_stickerset)
 async def add_sticker_to_stickerset(callback: CallbackQuery, state: FSMContext):
     await state.update_data(is_new_stickerset=False)
-    await callback.message.edit_text(text='🌈 <b>Отправь картинку, которую хочешь добавить в этот стикерсет</b>', parse_mode='HTML')
+    await callback.message.edit_text(text='🌈 <b>Отправь картинку, которую хочешь добавить в этот стикерпак</b>', parse_mode='HTML')
     await state.set_state(CreateStickerset.stickers_input)
 
 
